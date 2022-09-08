@@ -50,4 +50,9 @@ defmodule K.Release do
   defp load_app do
     Application.load(@app)
   end
+
+  def ready? do
+    # TODO
+    true
+  end
 end

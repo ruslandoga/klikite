@@ -8,6 +8,11 @@ require Logger
 # any compile-time configuration in here, as it won't be applied.
 # The block below contains prod specific runtime configuration.
 
+config :logger,
+  utc_log: true,
+  metadata: [:request_id, :remote_ip],
+  format: "$time $metadata[$level] $message\n"
+
 config :sentry,
   environment_name: config_env(),
   included_environments: []
@@ -32,6 +37,10 @@ if config_env() == :prod do
       environment variable DATABASE_PATH is missing.
       For example: /etc/k/k.db
       """
+
+  config :k, :dashboard,
+    username: System.fetch_env!("DASHBOARD_USERNAME"),
+    password: System.fetch_env!("DASHBOARD_PASSWORD")
 
   config :k, K.Repo,
     database: database_path,

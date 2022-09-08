@@ -19,8 +19,11 @@ defmodule KWeb.Endpoint do
   plug Plug.Static,
     at: "/",
     from: :k,
-    gzip: false,
+    gzip: true,
+    brotli: true,
     only: ~w(assets fonts images favicon.ico robots.txt)
+
+  plug KWeb.Plugs.HealthCheck
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
@@ -46,5 +49,10 @@ defmodule KWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+
+  plug RemoteIp
+  plug KWeb.Plugs.ConfigureLoggerMetadata
+  plug Sentry.PlugContext
+
   plug KWeb.Router
 end
