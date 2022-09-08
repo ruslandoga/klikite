@@ -22,8 +22,8 @@ config :k, KWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "uH98lWhPcw9d5n/REtN9PdtnW1wuHwbh/vS07eK+/EHP1Gg/mx70KcIdC6FGQKLN",
   watchers: [
-    # Start the esbuild watcher by calling Esbuild.install_and_run(:default, args)
-    esbuild: {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]}
+    npm: ["run", "watch:js", cd: Path.expand("../assets", __DIR__)],
+    npm: ["run", "watch:css", cd: Path.expand("../assets", __DIR__)]
   ]
 
 # ## SSL Support

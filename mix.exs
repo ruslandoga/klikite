@@ -9,7 +9,8 @@ defmodule K.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      releases: releases()
     ]
   end
 
@@ -25,7 +26,8 @@ defmodule K.MixProject do
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
+  defp elixirc_paths(:dev), do: ["lib", "dev"]
+  defp elixirc_paths(_env), do: ["lib"]
 
   # Specifies your project dependencies.
   #
@@ -41,12 +43,13 @@ defmodule K.MixProject do
       {:phoenix_live_view, "~> 0.17.5"},
       {:floki, ">= 0.30.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.6"},
-      {:esbuild, "~> 0.4", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.18"},
       {:jason, "~> 1.2"},
-      {:plug_cowboy, "~> 2.5"}
+      {:plug_cowboy, "~> 2.5"},
+      {:sentry, "~> 8.0"},
+      {:finch, "~> 0.13.0"}
     ]
   end
 
@@ -58,11 +61,25 @@ defmodule K.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "ecto.setup"],
-      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+      setup: ["deps.get", "ecto.setup", "cmd npm ci --prefix assets"],
+      "ecto.setup": [
+        "ecto.create",
+        "ecto.migrate --log-migrations-sql",
+        "run priv/repo/seeds.exs"
+      ],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.deploy": ["esbuild default --minify", "phx.digest"]
+      sentry_recompile: ["compile", "deps.compile sentry --force"],
+      "assets.deploy": [
+        "cmd npm ci --prefix assets",
+        "cmd npm run deploy:css --prefix assets",
+        "cmd npm run deploy:js --prefix assets",
+        "phx.digest"
+      ]
     ]
+  end
+
+  defp releases do
+    [k: [include_executables_for: [:unix]]]
   end
 end

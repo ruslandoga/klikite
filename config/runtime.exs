@@ -7,6 +7,10 @@ import Config
 # any compile-time configuration in here, as it won't be applied.
 # The block below contains prod specific runtime configuration.
 
+config :sentry,
+  environment_name: config_env(),
+  included_environments: []
+
 # ## Using releases
 #
 # If you use `mix release`, you need to explicitly enable the server
@@ -30,7 +34,18 @@ if config_env() == :prod do
 
   config :k, K.Repo,
     database: database_path,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5")
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5"),
+    # https://litestream.io/tips/#disable-autocheckpoints-for-high-write-load-servers
+    wal_auto_check_point: 0,
+    # https://litestream.io/tips/#busy-timeout
+    busy_timeout: 5000,
+    cache_size: -2000,
+    migrate: true
+
+  if dns = System.get_env("SENTRY_DSN") do
+    config :logger, backends: [:console, Sentry.LoggerBackend]
+    config :sentry, dsn: dns, included_environments: [:prod]
+  end
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
@@ -44,7 +59,7 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("PHX_HOST") || "example.com"
+  host = System.fetch_env!("PHX_HOST")
   port = String.to_integer(System.get_env("PORT") || "4000")
 
   config :k, KWeb.Endpoint,
