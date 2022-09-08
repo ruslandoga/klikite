@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS "schema_migrations" ("version" INTEGER PRIMARY KEY, "inserted_at" TEXT_DATETIME);
+CREATE TABLE IF NOT EXISTS "websites" ("id" INTEGER PRIMARY KEY, "name" TEXT NOT NULL, "domain" TEXT, "inserted_at" TEXT_DATETIME NOT NULL, "updated_at" TEXT_DATETIME NOT NULL);
+CREATE UNIQUE INDEX "websites_domain_index" ON "websites" ("domain");
+CREATE TABLE IF NOT EXISTS "sessions" ("id" BLOB NOT NULL PRIMARY KEY, "website_id" INTEGER NOT NULL CONSTRAINT "sessions_website_id_fkey" REFERENCES "websites"("id") ON DELETE CASCADE, "hostname" TEXT, "browser" TEXT, "os" TEXT, "device" TEXT, "screen" TEXT, "language" TEXT, "country" TEXT) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS "events" ("id" BLOB NOT NULL PRIMARY KEY, "website_id" INTEGER NOT NULL CONSTRAINT "events_website_id_fkey" REFERENCES "websites"("id") ON DELETE CASCADE, "session_id" INTEGER NOT NULL CONSTRAINT "events_session_id_fkey" REFERENCES "sessions"("id") ON DELETE CASCADE, "url" TEXT NOT NULL, "event_type" TEXT NOT NULL, "event_value" TEXT NOT NULL) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS "pageviews" ("id" BLOB NOT NULL PRIMARY KEY, "website_id" INTEGER NOT NULL CONSTRAINT "pageviews_website_id_fkey" REFERENCES "websites"("id") ON DELETE CASCADE, "session_id" INTEGER NOT NULL CONSTRAINT "pageviews_session_id_fkey" REFERENCES "sessions"("id") ON DELETE CASCADE, "url" TEXT NOT NULL, "referrer" TEXT) WITHOUT ROWID;
+INSERT INTO schema_migrations VALUES(20220908075017,'2022-09-08T08:26:11');
+INSERT INTO schema_migrations VALUES(20220908075018,'2022-09-08T08:26:32');
+INSERT INTO schema_migrations VALUES(20220908075130,'2022-09-08T08:26:32');
+INSERT INTO schema_migrations VALUES(20220908075141,'2022-09-08T08:26:32');

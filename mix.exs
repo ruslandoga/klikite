@@ -34,6 +34,8 @@ defmodule K.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      # TODO
+      # {:bcrypt_elixir, "~> 3.0"},
       {:phoenix, "~> 1.6.12"},
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_sql, "~> 3.6"},
@@ -49,7 +51,8 @@ defmodule K.MixProject do
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:sentry, "~> 8.0"},
-      {:finch, "~> 0.13.0"}
+      {:finch, "~> 0.13.0"},
+      {:bigflake, "0.5.0"}
       # TODO
       # {:educkdb, "~> 0.4.0"}
       # TODO geolocation
