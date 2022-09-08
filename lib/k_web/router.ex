@@ -21,6 +21,12 @@ defmodule KWeb.Router do
     get "/", PageController, :index
   end
 
+  scope "/", KWeb do
+    pipe_through :api
+
+    post "/event", EventController, :create
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", KWeb do
   #   pipe_through :api

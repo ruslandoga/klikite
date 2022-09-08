@@ -52,8 +52,6 @@ defmodule K.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:sentry, "~> 8.0"},
       {:finch, "~> 0.13.0"},
-      # TODO
-      {:bigflake, "0.5.0"},
       {:benchee, "~> 1.0", only: :bench},
       {:rexbug, "~> 1.0"},
       {:nimble_csv, "~> 1.2"},
