@@ -62,7 +62,8 @@ defmodule K.MixProject do
       {:locus, "~> 2.2"},
       # TODO
       {:tzdata, "~> 1.1"},
-      {:assertions, "~> 0.19.0", only: :test}
+      {:assertions, "~> 0.19.0", only: :test},
+      {:ex_machina, "~> 2.7", only: :test}
       # TODO
       # {:educkdb, "~> 0.4.0"}
     ]

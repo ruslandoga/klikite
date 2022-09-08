@@ -21,9 +21,8 @@ defmodule K.DataCase do
       alias K.Repo
 
       import Ecto
-      import Ecto.Changeset
-      import Ecto.Query
-      import K.DataCase
+      import Ecto.{Changeset, Query}
+      import K.{DataCase, Factory}
     end
   end
 
