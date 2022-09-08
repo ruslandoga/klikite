@@ -52,11 +52,21 @@ defmodule K.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:sentry, "~> 8.0"},
       {:finch, "~> 0.13.0"},
-      {:bigflake, "0.5.0"}
+      # TODO
+      {:bigflake, "0.5.0"},
+      {:benchee, "~> 1.0", only: :bench},
+      {:rexbug, "~> 1.0"},
+      {:nimble_csv, "~> 1.2"},
+      {:dialyxir, "~> 1.1", only: :dev, runtime: false},
+      # TODO
+      {:remote_ip, "~> 1.0.0"},
+      # TODO
+      {:locus, "~> 2.2"},
+      # TODO
+      {:tzdata, "~> 1.1"},
+      {:assertions, "~> 0.19.0", only: :test}
       # TODO
       # {:educkdb, "~> 0.4.0"}
-      # TODO geolocation
-      # TODO tz
     ]
   end
 
