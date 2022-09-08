@@ -50,6 +50,10 @@ defmodule K.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:sentry, "~> 8.0"},
       {:finch, "~> 0.13.0"}
+      # TODO
+      # {:educkdb, "~> 0.4.0"}
+      # TODO geolocation
+      # TODO tz
     ]
   end
 
