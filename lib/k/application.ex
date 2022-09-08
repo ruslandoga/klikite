@@ -7,9 +7,12 @@ defmodule K.Application do
 
   @impl true
   def start(_type, _args) do
+    repo_config = Application.fetch_env!(:k, K.Repo)
+
     children = [
       # Start the Ecto repository
       K.Repo,
+      {K.Release.Migrator, migrate: repo_config[:migrate]},
       # Start the Telemetry supervisor
       KWeb.Telemetry,
       # Start the PubSub system

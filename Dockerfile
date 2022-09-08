@@ -4,6 +4,9 @@
 
 FROM hexpm/elixir:1.14.0-erlang-25.0.4-alpine-3.16.1 as build
 
+ARG GIT_SHA
+ENV GIT_SHA=${GIT_SHA}
+
 # install build dependencies
 RUN apk add --no-cache --update git build-base nodejs npm
 
