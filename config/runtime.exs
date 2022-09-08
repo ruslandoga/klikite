@@ -1,4 +1,5 @@
 import Config
+require Logger
 
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the
@@ -45,6 +46,20 @@ if config_env() == :prod do
   if dns = System.get_env("SENTRY_DSN") do
     config :logger, backends: [:console, Sentry.LoggerBackend]
     config :sentry, dsn: dns, included_environments: [:prod]
+  else
+    Logger.info(
+      "Environment variable SENTRY_DSN is missing. " <>
+        "Sentry reporting will be disabled."
+    )
+  end
+
+  if maxmind_license_key = System.get_env("MAXMIND_LICENSE_KEY") do
+    config :k, maxmind_license_key: maxmind_license_key
+  else
+    Logger.info(
+      "Environment variable MAXMIND_LICENSE_KEY is missing. " <>
+        "Geolocation will be disabled."
+    )
   end
 
   # The secret key base is used to sign/encrypt cookies and other secrets.

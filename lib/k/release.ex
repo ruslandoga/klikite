@@ -1,6 +1,9 @@
 defmodule K.Release do
-  @moduledoc false
-  require Logger
+  @moduledoc """
+  Used for executing DB release tasks when run in production without Mix
+  installed.
+  """
+  @app :k
 
   defmodule Migrator do
     use GenServer
@@ -15,18 +18,6 @@ defmodule K.Release do
     end
   end
 
-  def migrate do
-    for repo <- repos() do
-      {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :up, all: true))
-    end
-  end
-
-  @app :k
-  defp repos do
-    Application.load(@app)
-    Application.fetch_env!(@app, :ecto_repos)
-  end
-
   sha =
     if sha = System.get_env("GIT_SHA") do
       sha
@@ -37,5 +28,26 @@ defmodule K.Release do
 
   def git_sha do
     unquote(String.trim(sha))
+  end
+
+  def migrate do
+    load_app()
+
+    for repo <- repos() do
+      {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :up, all: true))
+    end
+  end
+
+  def rollback(repo, version) do
+    load_app()
+    {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :down, to: version))
+  end
+
+  defp repos do
+    Application.fetch_env!(@app, :ecto_repos)
+  end
+
+  defp load_app do
+    Application.load(@app)
   end
 end

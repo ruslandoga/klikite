@@ -55,4 +55,4 @@ COPY --from=build --chown=nobody:nobody /app/_build/prod/rel/k ./
 
 ENV HOME=/app
 
-CMD /app/bin/k start
+CMD /app/bin/server

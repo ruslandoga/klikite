@@ -3,11 +3,12 @@ defmodule K.Application do
   # for more information on OTP Applications
   @moduledoc false
 
+  @app :k
   use Application
 
   @impl true
   def start(_type, _args) do
-    repo_config = Application.fetch_env!(:k, K.Repo)
+    repo_config = Application.fetch_env!(@app, K.Repo)
 
     children = [
       # Start the Ecto repository
@@ -23,6 +24,9 @@ defmodule K.Application do
       # {K.Worker, arg}
     ]
 
+    # TODO wait with :locus.await_loader(@db) before readiness_notifier
+    maybe_setup_locus()
+
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: K.Supervisor]
@@ -35,5 +39,11 @@ defmodule K.Application do
   def config_change(changed, _new, removed) do
     KWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp maybe_setup_locus do
+    if key = Application.get_env(@app, :maxmind_license_key) do
+      K.Location.setup(key)
+    end
   end
 end
