@@ -36,3 +36,6 @@ npm-debug.log
 *.db
 *.db-*
 
+.DS_Store
+.envrc
+.elixir_ls
