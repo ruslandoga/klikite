@@ -5,11 +5,21 @@ defmodule K.Ingester do
   alias K.{Repo, Session, Event, Pageview}
   import Ecto.Query
 
+  @pubsub K.PubSub
+  @events_topic "events"
+
+  @doc """
+  Subscribes for `{#{__MODULE__}, :events}` messages that indicate new events.
+  """
+  def events_subscribe do
+    Phoenix.PubSub.subscribe(@pubsub, @events_topic)
+  end
+
   # TODO
   # - very naive insert for now, will be optimised later.
   def insert_events(events) do
     # TODO group by session_id? then insert/upsert together
-    # TODO maybe skip session optimisationa nd instead construct it based at read time
+    # TODO maybe skip session optimisation and instead construct it based at read time
     {:ok, :ok} =
       Repo.transaction(fn ->
         events = cast_events(events)
@@ -17,7 +27,7 @@ defmodule K.Ingester do
         Enum.each(events, &maybe_upsert_session(&1))
       end)
 
-    :ok = Phoenix.PubSub.broadcast!(K.PubSub, "events", {__MODULE__, :events})
+    :ok = Phoenix.PubSub.broadcast!(@pubsub, @events_topic, {__MODULE__, :events})
   end
 
   defp maybe_upsert_session(%{time: time} = event) do
@@ -76,6 +86,15 @@ defmodule K.Ingester do
     end
   end
 
+  def session_hash(website_id, domain, ip, user_agent) do
+    :crypto.hash(:sha256, [to_string(website_id), domain, ip, user_agent, session_salt()])
+  end
+
+  def session_salt do
+    # TODO rotating salt
+    "salt"
+  end
+
   defp prev_event(time) do
     Event
     |> limit(1)
@@ -119,5 +138,110 @@ defmodule K.Ingester do
     %Event{}
     |> cast(data, Event.__schema__(:fields))
     |> apply_action!(:insert)
+  end
+
+  @desktop_screen_width 1920
+  @laptop_screen_width 1024
+  @mobile_screen_width 479
+
+  @desktop_os [
+    "Windows 3.11",
+    "Windows 95",
+    "Windows 98",
+    "Windows 2000",
+    "Windows XP",
+    "Windows Server 2003",
+    "Windows Vista",
+    "Windows 7",
+    "Windows 8",
+    "Windows 8.1",
+    "Windows 10",
+    "Windows ME",
+    "Open BSD",
+    "Sun OS",
+    "Linux",
+    "Mac OS",
+    "QNX",
+    "BeOS",
+    "OS/2",
+    "Chrome OS"
+  ]
+
+  @mobile_os ["iOS", "Android OS", "BlackBerry OS", "Windows Mobile", "Amazon OS"]
+
+  @doc """
+  Gets the device type based on screen resolution and OS.
+
+  Example:
+
+      iex> get_device("1920x1080", "Chrome OS")
+      "laptop"
+
+      iex> get_device("1920x1080", "Mac OS")
+      "laptop"
+
+  """
+  def get_device(screen, os) when is_binary(screen) do
+    [width, _height] = String.split(screen, "x")
+    _device(os, width)
+  end
+
+  # TODO
+  defp _device("Chrome OS", _width), do: "laptop"
+
+  defp _device(os, width) when os in @desktop_os and width < @desktop_screen_width do
+    "laptop"
+  end
+
+  defp _device(os, _width) when os in @desktop_os, do: "desktop"
+
+  # TODO
+  defp _device("Amazon OS", _width), do: "tablet"
+
+  defp _device(os, width) when os in @mobile_os and width > @mobile_screen_width do
+    "tablet"
+  end
+
+  defp _device(os, _width) when os in @mobile_os, do: "mobile"
+  defp _device(_os, width) when width >= @desktop_screen_width, do: "desktop"
+  defp _device(_os, width) when width >= @laptop_screen_width, do: "laptop"
+  defp _device(_os, width) when width >= @mobile_screen_width, do: "tablet"
+  defp _device(_os, _width), do: "mobile"
+
+  @doc """
+  Gets the country ISO code based on IP address.
+
+  Example:
+
+      iex> get_country("37.232.45.178")
+      "GE"
+
+  """
+  def get_country(ip) when is_binary(ip) do
+    case K.Location.location_from_ip(ip) do
+      %{"country" => %{"iso_code" => iso_code}} -> iso_code
+      _other -> nil
+    end
+  end
+
+  @doc """
+  Collects client info based on user agent header, ip address, and screen size.
+
+  Example:
+
+      iex> user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.5 Safari/605.1.15"
+      iex> ip = "37.232.45.178"
+      iex> screen = "1920x1080"
+      iex> get_client_info(user_agent, ip, screen)
+      %{browser: "Safari", country: "GE", device: "desktop", os: "Mac OS X"}
+
+  """
+  def get_client_info(user_agent, ip, screen) do
+    # TODO https://github.com/matomo-org/device-detector
+    # https://github.com/DamonOehlman/detect-browser/blob/master/src/index.ts
+    %UAParser.UA{family: browser, os: %UAParser.OperatingSystem{family: os}} =
+      UAParser.parse(user_agent)
+
+    %{browser: browser, os: os, country: get_country(ip), device: get_device(screen, os)}
   end
 end

@@ -1,3 +1,5 @@
+- heartbeat/event info extractor (browser/os/etc.)
+- session/duration builder
 - test auth + good cover
 - locus location
 - locus in tests

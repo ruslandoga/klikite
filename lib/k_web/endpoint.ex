@@ -50,6 +50,9 @@ defmodule KWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
 
+  # TODO cf-connecting-ip?
+  # https://developers.cloudflare.com/fundamentals/get-started/reference/http-request-headers/
+  # x-forwarded-for seems to be enough
   plug RemoteIp
   plug KWeb.Plugs.ConfigureLoggerMetadata
   plug Sentry.PlugContext
