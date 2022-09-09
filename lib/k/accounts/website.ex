@@ -1,4 +1,4 @@
-defmodule K.Website do
+defmodule K.Accounts.Website do
   @moduledoc false
   use Ecto.Schema
 

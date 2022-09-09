@@ -1,5 +1,7 @@
 defmodule K.Sessions do
-  @moduledoc false
+  @moduledoc """
+  Contains functions to aggregate sessions
+  """
   use GenServer
 
   # TODO tab per scheduler

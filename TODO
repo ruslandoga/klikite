@@ -1,7 +1,18 @@
 - test auth + good cover
 - locus location
-- locus intests
+- locus in tests
 - ingester
 - benches
 - dashboard
 - branch in docker tags
+- as elixir lib
+- as telemetry/live_dashboard extension
+- firewall/blocklist
+- accounts (register/login/invite)
+- sharing
+- duckdb
+- distributed
+- extensible (custom widgets via sql? via rest api like postgrest?)
+- exportable (like sqlean)
+- self-contained binary (like burrito)
+- tz/location via sqlite
