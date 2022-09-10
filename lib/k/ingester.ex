@@ -87,11 +87,12 @@ defmodule K.Ingester do
   end
 
   def session_hash(website_id, domain, ip, user_agent) do
+    # TODO siphash
     :crypto.hash(:sha256, [to_string(website_id), domain, ip, user_agent, session_salt()])
   end
 
   def session_salt do
-    # TODO rotating salt
+    # TODO rotating salt?
     "salt"
   end
 
@@ -117,10 +118,7 @@ defmodule K.Ingester do
     Enum.map(events, &prepare_event/1)
   end
 
-  defp prepare_event(%{"user_agent" => user_agent} = event) do
-    ["wakatime/" <> _wakatime_version, os, _python_or_go_version, editor, _extension] =
-      String.split(user_agent, " ")
-
+  defp prepare_event(%{user_agent: user_agent, domain: domain} = event) do
     os = String.replace(os, ["(", ")"], "")
 
     event
