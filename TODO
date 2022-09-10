@@ -18,3 +18,4 @@
 - exportable (like sqlean)
 - self-contained binary (like burrito)
 - tz/location via sqlite
+- "deploy:tracker": "NODE_ENV=production npm run tracker -- --minify --analyze"

@@ -5,138 +5,202 @@ defmodule K.Ingester do
   alias K.{Repo, Session, Event, Pageview}
   import Ecto.Query
 
-  @pubsub K.PubSub
-  @events_topic "events"
+  # @pubsub K.PubSub
+  # @events_topic "events"
 
-  @doc """
-  Subscribes for `{#{__MODULE__}, :events}` messages that indicate new events.
-  """
-  def events_subscribe do
-    Phoenix.PubSub.subscribe(@pubsub, @events_topic)
-  end
+  # @doc """
+  # Subscribes for `{#{__MODULE__}, :events}` messages that indicate new events.
+  # """
+  # def events_subscribe do
+  #   Phoenix.PubSub.subscribe(@pubsub, @events_topic)
+  # end
 
   # TODO
   # - very naive insert for now, will be optimised later.
-  def insert_events(events) do
+  def insert_heartbeats(heartbeats) do
     # TODO group by session_id? then insert/upsert together
     # TODO maybe skip session optimisation and instead construct it based at read time
-    {:ok, :ok} =
+    # {:ok, :ok} =
+    #   Repo.transaction(fn ->
+    #     events = cast_events(events)
+    #     Repo.insert_all(Event, events)
+    #     Enum.each(events, &maybe_upsert_session(&1))
+    #   end)
+
+    {:ok, _} =
       Repo.transaction(fn ->
-        events = cast_events(events)
-        Repo.insert_all(Event, events)
-        Enum.each(events, &maybe_upsert_session(&1))
+        heartbeats = Enum.map(heartbeats, &enhance_heartbeat/1)
+        Repo.insert_all("heartbeats", heartbeats)
       end)
 
-    :ok = Phoenix.PubSub.broadcast!(@pubsub, @events_topic, {__MODULE__, :events})
+    :ok
+
+    # :ok = Phoenix.PubSub.broadcast!(@pubsub, @events_topic, {__MODULE__, :events})
   end
 
-  defp maybe_upsert_session(%{time: time} = event) do
-    prev_session_id = prev_session_id() || 0
-    prev_event = prev_event(time)
-    # 30 minutes in seconds
-    interval = 30 * 60
+  def enhance_heartbeat(heartbeat) do
+    # TODO
+    time = :os.system_time(:millisecond) / 1000
 
-    within_interval? =
-      if prev_event do
-        diff = time - prev_event.time
+    %{
+      user_agent: user_agent,
+      ip: ip,
+      referer: referer,
+      domain: domain,
+      url: url,
+      language: language,
+      width: width
+    } = heartbeat
 
-        if diff < interval do
-          last_session_rowid =
-            Session
-            |> order_by(desc: :rowid)
-            |> limit(1)
-            |> select([s], s.rowid)
+    IO.inspect(heartbeat, label: "heartbeat.1")
 
-          Session
-          |> where([s], s.rowid == subquery(last_session_rowid))
-          |> Repo.update_all(inc: [length: diff])
-        end
+    %UAParser.UA{family: browser, os: %UAParser.OperatingSystem{family: os}} =
+      UAParser.parse(user_agent)
+
+    {country, city} =
+      case :locus.lookup(:city, ip) do
+        {:ok, %{"country" => %{"iso_code" => country}, "city" => %{"names" => %{"en" => city}}}} ->
+          # or geoname id?
+          {country, city}
+
+        :not_found ->
+          {nil, nil}
       end
 
-    # TODO don't need?
-    if within_interval? do
-      unless Map.take(event, [:website_id, :hostname, :ip, :user_agent]) ==
-               Map.take(prev_event, [:website_id, :hostname, :ip, :user_agent]) do
-        new_session_id = if within_interval?, do: prev_session_id, else: prev_session_id + 1
+    heartbeat = [
+      time: time,
+      hash: hash(domain, ip, user_agent),
+      url: url,
+      domain: domain,
+      referer: referer,
+      os: os,
+      browser: browser,
+      device: get_device(os, width),
+      country: country,
+      city: city,
+      language: language
+    ]
 
-        new_session = %{
-          id: new_session_id,
-          start: time,
-          length: 0,
-          website_id: event.website_id,
-          hostname: event.hostname,
-          ip: event.ip
-        }
-
-        Repo.insert_all(Session, [new_session])
-      end
-    else
-      new_session_id = if within_interval?, do: prev_session_id, else: prev_session_id + 1
-
-      new_session = %{
-        id: new_session_id,
-        start: time,
-        length: 0,
-        website_id: event.website_id,
-        hostname: event.hostname,
-        ip: event.ip
-      }
-
-      Repo.insert_all(Session, [new_session])
-    end
+    IO.inspect(heartbeat, label: "heartbeat.2")
   end
 
-  def session_hash(website_id, domain, ip, user_agent) do
+  def hash(domain, ip, user_agent) do
     # TODO siphash
-    :crypto.hash(:sha256, [to_string(website_id), domain, ip, user_agent, session_salt()])
+    :crypto.hash(:sha256, [domain, ip, user_agent, salt()])
   end
 
-  def session_salt do
-    # TODO rotating salt?
+  defp salt do
+    # TODO rotate
     "salt"
   end
 
-  defp prev_event(time) do
-    Event
-    |> limit(1)
-    |> order_by(desc: :time)
-    |> where([h], h.time < ^time)
-    |> select([h], map(h, [:website_id, :hostname, :ip, :user_agent]))
-    |> Repo.one()
-  end
+  # defp maybe_upsert_session(%{time: time} = event) do
+  #   prev_session_id = prev_session_id() || 0
+  #   prev_event = prev_event(time)
+  #   # 30 minutes in seconds
+  #   interval = 30 * 60
 
-  defp prev_session_id do
-    Session
-    |> order_by(desc: :id)
-    |> limit(1)
-    |> select([d], d.id)
-    |> Repo.one()
-  end
+  #   within_interval? =
+  #     if prev_event do
+  #       diff = time - prev_event.time
 
-  @doc false
-  def cast_events(events) do
-    Enum.map(events, &prepare_event/1)
-  end
+  #       if diff < interval do
+  #         last_session_rowid =
+  #           Session
+  #           |> order_by(desc: :rowid)
+  #           |> limit(1)
+  #           |> select([s], s.rowid)
 
-  defp prepare_event(%{user_agent: user_agent, domain: domain} = event) do
-    os = String.replace(os, ["(", ")"], "")
+  #         Session
+  #         |> where([s], s.rowid == subquery(last_session_rowid))
+  #         |> Repo.update_all(inc: [length: diff])
+  #       end
+  #     end
 
-    event
-    |> Map.delete("user_agent")
-    |> Map.put("editor", editor)
-    |> Map.put("operating_system", os)
-    |> Map.update("is_write", nil, fn is_write -> !!is_write end)
-    |> cast_event()
-    |> Map.take(Event.__schema__(:fields))
-  end
+  #   # TODO don't need?
+  #   if within_interval? do
+  #     unless Map.take(event, [:website_id, :hostname, :ip, :user_agent]) ==
+  #              Map.take(prev_event, [:website_id, :hostname, :ip, :user_agent]) do
+  #       new_session_id = if within_interval?, do: prev_session_id, else: prev_session_id + 1
 
-  defp cast_event(data) do
-    import Ecto.Changeset
+  #       new_session = %{
+  #         id: new_session_id,
+  #         start: time,
+  #         length: 0,
+  #         website_id: event.website_id,
+  #         hostname: event.hostname,
+  #         ip: event.ip
+  #       }
 
-    %Event{}
-    |> cast(data, Event.__schema__(:fields))
-    |> apply_action!(:insert)
-  end
+  #       Repo.insert_all(Session, [new_session])
+  #     end
+  #   else
+  #     new_session_id = if within_interval?, do: prev_session_id, else: prev_session_id + 1
+
+  #     new_session = %{
+  #       id: new_session_id,
+  #       start: time,
+  #       length: 0,
+  #       website_id: event.website_id,
+  #       hostname: event.hostname,
+  #       ip: event.ip
+  #     }
+
+  #     Repo.insert_all(Session, [new_session])
+  #   end
+  # end
+
+  # def session_hash(website_id, domain, ip, user_agent) do
+  #   # TODO siphash
+  #   :crypto.hash(:sha256, [to_string(website_id), domain, ip, user_agent, session_salt()])
+  # end
+
+  # def session_salt do
+  #   # TODO rotating salt?
+  #   "salt"
+  # end
+
+  # defp prev_event(time) do
+  #   Event
+  #   |> limit(1)
+  #   |> order_by(desc: :time)
+  #   |> where([h], h.time < ^time)
+  #   |> select([h], map(h, [:website_id, :hostname, :ip, :user_agent]))
+  #   |> Repo.one()
+  # end
+
+  # defp prev_session_id do
+  #   Session
+  #   |> order_by(desc: :id)
+  #   |> limit(1)
+  #   |> select([d], d.id)
+  #   |> Repo.one()
+  # end
+
+  # @doc false
+  # def cast_events(events) do
+  #   Enum.map(events, &prepare_event/1)
+  # end
+
+  # defp prepare_event(%{user_agent: user_agent, domain: domain} = event) do
+  #   os = String.replace(os, ["(", ")"], "")
+
+  #   event
+  #   |> Map.delete("user_agent")
+  #   |> Map.put("editor", editor)
+  #   |> Map.put("operating_system", os)
+  #   |> Map.update("is_write", nil, fn is_write -> !!is_write end)
+  #   |> cast_event()
+  #   |> Map.take(Event.__schema__(:fields))
+  # end
+
+  # defp cast_event(data) do
+  #   import Ecto.Changeset
+
+  #   %Event{}
+  #   |> cast(data, Event.__schema__(:fields))
+  #   |> apply_action!(:insert)
+  # end
 
   @desktop_screen_width 1920
   @laptop_screen_width 1024
@@ -179,8 +243,8 @@ defmodule K.Ingester do
       "laptop"
 
   """
-  def get_device(screen, os) when is_binary(screen) do
-    [width, _height] = String.split(screen, "x")
+  def get_device(os, width) do
+    # [width, _height] = String.split(screen, "x")
     _device(os, width)
   end
 
