@@ -57,7 +57,7 @@ defmodule K.MixProject do
       {:nimble_csv, "~> 1.2"},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       # TODO
-      {:remote_ip, "~> 1.0.0"},
+      {:remote_ip, "~> 1.1.0"},
       # TODO
       {:locus, "~> 2.2"},
       # TODO
